@@ -47,6 +47,17 @@ always @ (posedge clk or negedge rstn)
     else
         cnt <= cnt + 11'd1;
 
+//ECO
+//Bug fix for issue:
+// At large advance angles, all three phases activate at once (short-circuiting the bridge), masking B//EMF signals and breaking sensorless position detection.
+// Sector-safe angle wrapping (0-4095 ≡ 0-360°)
+// Keeps angle in [341,2389] range (-30° to 330°)   
+wire [11:0] wrapped_vtheta =
+	    (v_theta < 12'd341)  ? v_theta + 12'd2048 :  // Underflow wrap (e.g., -40° → 320°)
+	    (v_theta > 12'd2389) ? v_theta - 12'd2048 :  // Overflow wrap (e.g., 350° → -10°)
+	    v_theta;                                     // Normal case
+   
+   
 always @ (posedge clk or negedge rstn)
     if(~rstn) begin
         rom_x <= 0;
@@ -59,7 +70,7 @@ always @ (posedge clk or negedge rstn)
         pwm_act <= 1'b0;
     end else begin
         if(cnt==11'd2041-ROM_LATENCY) begin
-            rom_x <= v_theta;
+            rom_x <= wrapped_vtheta;
             mul_i1 <= v_amp;
             mul_i2 <= v_rho;
         end else if(cnt==11'd2042-ROM_LATENCY) begin
