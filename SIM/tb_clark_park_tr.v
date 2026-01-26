@@ -94,15 +94,19 @@ park_tr u_park_tr (
 integer i;
 
 initial begin
+   
+   
     while(~rstn) @ (posedge clk);
     for (i=0; i<1000; i=i+1) @ (posedge clk) begin
         en_theta <= 1'b1;
         theta <= theta + 12'd10;
         @ (posedge clk);
         en_theta <= 1'b0;
-        repeat (9) @ (posedge clk);
+        repeat (12) @ (posedge clk);
+       $display("time: %0t id %x iq %x",$time,id,iq);       
     end
     $finish;
 end
+
 
 endmodule
