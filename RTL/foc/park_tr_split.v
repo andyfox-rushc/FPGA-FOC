@@ -93,6 +93,12 @@ always @(*)
 	  beta_cos_d = mul1_res;
 	  beta_sin_d = mul2_res;
        end
+     else
+       //this is redundant, but included to avoid latch synthesis
+       begin
+	  beta_cos_d = alpha_cos;
+	  beta_sin_d = alpha_sin;
+       end
 end
    
 
