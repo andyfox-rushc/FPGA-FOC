@@ -86,6 +86,8 @@ always @ (posedge clk or negedge rstn)
    //
 always @(*)
   begin
+     beta_cos_d = 0;
+     beta_sin_d = 0;
      if (en_s1) //multiply on en_s1 state (which is state after i_en)
        begin
 	  beta_cos_d = mul1_res;
