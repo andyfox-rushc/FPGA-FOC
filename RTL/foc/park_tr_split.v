@@ -43,15 +43,36 @@ sincos u_sincos (
     .o_cos       ( cos_psi    )
 );
 
+   
+//The multipliers
+   wire signed [15:0] mul1_a, mul1_b, mul2_a, mul2_b;
+   reg signed [31:0] mul1_res, mul2_res;
+
+   //combinational block
+   //note mul1_res and mul2_res are of type reg
+   //for sequential assign
+   always @(*)
+     begin
+	mul1_res = mul1_a * mul1_b;
+	mul2_res = mul2_a * mul2_b;
+     end
+
+   //set up the arguments for the multiplier based on state.
+   assign mul1_a = (en_s1) ? i_ibeta_q: i_ialpha;
+   assign mul1_b = (en_s1) ? cos_psi_q: cos_psi;
+   assign mul2_a = (en_s1) ? i_ibeta_q: i_ialpha;
+   assign mul2_b = (en_s1) ? sin_psi_q: sin_psi;
+   
+   
 always @ (posedge clk or negedge rstn)
     if(~rstn) begin
-        {alpha_cos, alpha_sin, beta_cos, beta_sin,i_ibeta_q,sin_psi_q, cos_psi_q} <= 0;
+        {alpha_cos, alpha_sin, i_ibeta_q,sin_psi_q, cos_psi_q} <= 0;
     end else begin
        if (i_en)
 	 begin
 	    //multiply on state when i_en asserted
-            alpha_cos <= i_ialpha * cos_psi;
-            alpha_sin <= i_ialpha * sin_psi;
+            alpha_cos <= mul1_res;
+            alpha_sin <= mul2_res;
 	    //stash stuff for beta computation which is done on next
 	    //state
 	    sin_psi_q <= sin_psi;
@@ -67,8 +88,8 @@ always @(*)
   begin
      if (en_s1) //multiply on en_s1 state (which is state after i_en)
        begin
-	  beta_cos_d = i_ibeta_q  * cos_psi_q;
-	  beta_sin_d = i_ibeta_q  * sin_psi_q;
+	  beta_cos_d = mul1_res;
+	  beta_sin_d = mul2_res;
        end
 end
    
