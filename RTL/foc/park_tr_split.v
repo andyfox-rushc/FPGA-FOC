@@ -93,7 +93,10 @@ always @(*)
        end
 end
    
-   
+
+//Set up the state variable en_s1 to denote state 1.
+//It is set once we see i_en then cleared.
+
 always @ (posedge clk or negedge rstn)
     if(~rstn) begin
         {o_en, o_id, o_iq,en_s1} <= 0;
