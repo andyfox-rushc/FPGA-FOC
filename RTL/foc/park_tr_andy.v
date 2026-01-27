@@ -21,7 +21,7 @@ module park_tr(
 );
 
 wire signed [15:0] sin_psi, cos_psi;  // -1~+1 is mapped to -16384~+16384
-
+reg signed [15:0] sin_psi_q, cos_psi_q;
 
    reg signed [31:0] alpha_cos, alpha_sin, beta_cos, beta_sin;
    wire signed [31:0] ide = alpha_cos + beta_sin;
@@ -66,6 +66,8 @@ reg do_mult_q; //power saving. Only multiply when we have to.
 reg signed [15:0] mul1_a, mul1_b;  // Inputs for multiplier 1
 reg signed [15:0] mul2_a, mul2_b;  // Inputs for multiplier 2
 reg signed [31:0] mul1_res, mul2_res;  // Results from both
+
+   reg		  en_s1; //for debug;
    
 always @(posedge clk or negedge rstn) begin
    if (~rstn)
@@ -99,6 +101,13 @@ always @(posedge clk or negedge rstn)
 	  mul1_b <= 15'b0;
 	  mul2_a <= 15'b0;
   	  mul2_b <= 15'b0;
+	  cos_psi_q <= 16'b0;
+	  sin_psi_q <= 16'b0;
+	  alpha_cos <= 32'b0;
+	  alpha_sin <= 32'b0;
+	  beta_cos <= 32'b0;
+	  beta_sin <= 32'b0;
+	  
        end
      else
        begin
@@ -106,28 +115,30 @@ always @(posedge clk or negedge rstn)
 	  case (mul_machine_state_q)
 	    MUL_IDLE_STATE:
 	    begin
-	       if (sincos_valid_int)
+	       if (sincos_valid_int) //Bug in original code, keeps on reading memory, even if not ready !
 		 begin
-		    //first mult
+		    //first multiply
 		    mul_machine_state_q <= MUL_MUL1_STATE;
 	            mul1_a <= i_ialpha;
 		    mul1_b <= cos_psi;
 	            mul2_a <= i_ialpha;
 		    mul2_b <= sin_psi;
-		    do_mult_q <= 1'b1;
+		    do_mult_q <= 1'b1; //turn on multiplier
+		    cos_psi_q <= cos_psi;
+		    sin_psi_q <= sin_psi;
 		 end
 	    end
 	    MUL_MUL1_STATE:
 	      begin
 		 //second mult
 		 mul_machine_state_q <= MUL_MUL2_STATE;
-		 do_mult_q <= 1'b1;
+		 do_mult_q <= 1'b1; //turn on multiplier
 		 alpha_cos <= mul1_res;
 		 alpha_sin <= mul2_res;
 		 mul1_a <= i_ibeta;
-		 mul1_b <= cos_psi;
-		 mul2_a <=i_ibeta;
-		 mul2_b <= sin_psi;
+		 mul1_b <= cos_psi_q;
+		 mul2_a <= i_ibeta;
+		 mul2_b <= sin_psi_q;
 	      end // case: MUL_MUL1_STATE
 	    MUL_MUL2_STATE:
 	      begin
@@ -144,6 +155,7 @@ always @(posedge clk or negedge rstn)
 
 //Parallel machine to update the outputs.
 
+   
 always @(posedge clk or negedge rstn)
   if (~rstn)
     begin
@@ -153,9 +165,13 @@ always @(posedge clk or negedge rstn)
     end
   else
     begin
+       o_en <= 1'b0;
+       en_s1 <= 1'b0;
+       
        case (op_machine_state_q)
 	 OP_IDLE_STATE:
 	   begin
+	      en_s1 <= i_en; //for debug only
 	      if (i_en)
 		begin
 		   op_machine_state_q <= OP_COMMIT_STATE;
@@ -167,6 +183,7 @@ always @(posedge clk or negedge rstn)
 	      op_machine_state_q <= OP_IDLE_STATE;
 	      o_id <= ide[31:16];
 	      o_iq <= iqe[31:16];
+	      o_en <= 1'b1;
 	   end
        endcase // case (op_machine_state_q)
     end // else: !if(~rstn)
