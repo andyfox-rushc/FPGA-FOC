@@ -112,6 +112,10 @@ always @ (posedge clk or negedge rstn)
        en_s1 <= i_en;
        o_en <= en_s1;
        if(en_s1) begin
+	  //note how o_id is registered.
+	  //So we are bound by the clock period:
+	  //multiply + add, which is fine at 36Mhz.
+	  //
           o_id <= ide[31:16];
           o_iq <= iqe[31:16];
 	  en_s1 <= 1'b0;
