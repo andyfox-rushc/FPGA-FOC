@@ -55,18 +55,27 @@ module cartesian2polar #(
     // CORDIC gain inverse (K ≈1.64676, K_INV ≈0.60725 * 2^15 ≈19898)
     localparam [15:0] K_INV = 16'd19898;
 
-    // Function to compute floor_log2 (position of highest set bit)
+// Revised floor_log2: Unrolled if-else chain (synthesizable priority encoder for MSB position)
+    // Returns position of highest set bit (0 if val=0)
     function [4:0] floor_log2;
         input [15:0] val;
-        integer i;
         begin
-            floor_log2 = 0;
-            for (i = 15; i >= 0; i = i - 1) begin
-                if (val[i]) begin
-                    floor_log2 = i;
-                    i = -1;  // Break loop
-                end
-            end
+            if      (val[15]) floor_log2 = 5'd15;
+            else if (val[14]) floor_log2 = 5'd14;
+            else if (val[13]) floor_log2 = 5'd13;
+            else if (val[12]) floor_log2 = 5'd12;
+            else if (val[11]) floor_log2 = 5'd11;
+            else if (val[10]) floor_log2 = 5'd10;
+            else if (val[9])  floor_log2 = 5'd9;
+            else if (val[8])  floor_log2 = 5'd8;
+            else if (val[7])  floor_log2 = 5'd7;
+            else if (val[6])  floor_log2 = 5'd6;
+            else if (val[5])  floor_log2 = 5'd5;
+            else if (val[4])  floor_log2 = 5'd4;
+            else if (val[3])  floor_log2 = 5'd3;
+            else if (val[2])  floor_log2 = 5'd2;
+            else if (val[1])  floor_log2 = 5'd1;
+            else              floor_log2 = 5'd0;  // val[0] or 0
         end
     endfunction
 
