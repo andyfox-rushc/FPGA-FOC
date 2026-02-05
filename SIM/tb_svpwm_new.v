@@ -40,7 +40,10 @@ wire pwm_en, pwm_a, pwm_b, pwm_c;
    
 // 这里只是刚好借助了 sincos 模块来生成正弦波给 cartesian2polar ，只是为了仿真。在 FOC 设计中 sincos 模块并不是用来给 cartesian2polar 提供输入数据的，而是被 park_tr 调用。
 
-   //given theta get sin/cos
+//given theta get sin/cos
+//Done with look up.
+//
+
 sincos u_sincos (
     .rstn         ( rstn       ),
     .clk          ( clk        ),
@@ -52,9 +55,16 @@ sincos u_sincos (
 );
 
    wire theta_valid;
+
+   //
+   //generate theta from x/y
+   //360 degrees mappped to 4096 positions
+   //45 = 4096/8 = 512.
+   //(in cartesian coordinates x = 1, y = 1 -> 45 degrees)
+   //
    
 cartesian2polar u_cartesian2polar (
-    .rst_n         ( rstn       ),
+    .rstn         ( rstn       ),
     .clk          ( clk        ),
     .i_en         ( 1'b1       ),
     .i_x          ( underflow_mode ? underflow_x : x / 16'sd5 ),  // input : 振幅为 ±3277 的余弦波
@@ -105,9 +115,16 @@ initial begin
    // Wait ~20 cycles (>14 latency) for module to process new inputs
 
    wait(u_cartesian2polar.o_en == 1'b1);
-    $display("Forced underflow (x=y=-1): rho=%d (expected ~1), phi=%d theta is %d (expected 2560 for 225 degrees)", 
+    $display("Forced underflow (x=y=-1): rho=%d (expected ~1), phi=%d theta is %d (expected ~2560 for 225 degrees)", 
 	     rho, phi,
 	     u_cartesian2polar.o_theta);  // 225° since (-1,-1) is quadrant 2 (quadrants labelled: 0,1,2,3)
+    if (!(u_cartesian2polar.o_theta inside {[2400 : 2600]}))
+      begin
+         $error("Underflow for o_theta value %d (225 degrees) expected to be ~2560",
+		u_cartesian2polar.o_theta);
+	 $finish();
+      end
+   
 
     // Original forced small positive test (unchanged, but added display for rho/phi)
     underflow_x = 16'sd1;
@@ -119,7 +136,7 @@ initial begin
 
    
     $display("Forced small positive (x=y=1): rho=%d (expected ~1), phi=%d (expected 512 for 45°). Theta is %d Underflow_mode is %d", rho, phi,u_cartesian2polar.o_theta,underflow_mode);
-    if (u_cartesian2polar.o_theta inside {500, 530})
+    if (!(u_cartesian2polar.o_theta inside {[500 : 530]}))
       begin
          $error("Underflow for o_theta value %d (45 degrees) expected to be 512",
 		u_cartesian2polar.o_theta);

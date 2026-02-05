@@ -1,8 +1,8 @@
 module cartesian2polar #(
-    parameter ATTENUATION = 0  // Optional right-shift for rho attenuation (e.g., for SVPWM scaling)
+    parameter ATTENUAION = 0  // Optional right-shift for rho attenuation (e.g., for SVPWM scaling)
 ) (
     input wire clk,
-    input wire rst_n,
+    input wire rstn,
     input wire i_en,
     input wire signed [15:0] i_x,
     input wire signed [15:0] i_y,
@@ -70,8 +70,8 @@ module cartesian2polar #(
         end
     endfunction
 
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
+    always @(posedge clk or negedge rstn) begin
+        if (!rstn) begin
             X <= 0;
             Y <= 0;
             Z <= 0;
@@ -170,7 +170,7 @@ module cartesian2polar #(
                 // Step 4: Output computation
                 // Rho: Descale and attenuate (X is positive after vectoring)
                 descaled_rho = X >> shift_amt;  // Unsigned shift
-                attenuated_rho = descaled_rho >> ATTENUATION;
+                attenuated_rho = descaled_rho >> ATTENUAION;
                 o_rho <= (attenuated_rho > 4095) ? 12'd4095 : attenuated_rho[11:0];
                 
                 // Theta: Compute base and adjust for quadrant/swap
