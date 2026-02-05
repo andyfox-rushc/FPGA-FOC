@@ -72,6 +72,7 @@ always @ (posedge clk or negedge rstn)
 
             mul1_a <= lat_ialpha;
             mul1_b <= lat_sin;
+
             mul2_a <= lat_ibeta;
             mul2_b <= lat_cos;
         end
@@ -83,6 +84,7 @@ always @ (posedge clk or negedge rstn)
 
         mul1_a <= i_ialpha;
         mul1_b <= cos_psi;
+
         mul2_a <= i_ibeta;
         mul2_b <= sin_psi;
     end

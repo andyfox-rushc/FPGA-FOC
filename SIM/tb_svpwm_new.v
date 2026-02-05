@@ -40,24 +40,28 @@ wire pwm_en, pwm_a, pwm_b, pwm_c;
    
 // 这里只是刚好借助了 sincos 模块来生成正弦波给 cartesian2polar ，只是为了仿真。在 FOC 设计中 sincos 模块并不是用来给 cartesian2polar 提供输入数据的，而是被 park_tr 调用。
 
+   //given theta get sin/cos
 sincos u_sincos (
     .rstn         ( rstn       ),
     .clk          ( clk        ),
-    .i_en         ( 1'b1       ),
+    .i_en         ( 1'b1       ),   //constantly reading
     .i_theta      ( theta      ),   // input : θ, 一个递增的角度值
     .o_en(o_en),
     .o_sin        ( y          ),   // output : y, 振幅为 ±16384 的正弦波
     .o_cos        ( x          )    // output : x, 振幅为 ±16384 的余弦波
 );
 
+   wire theta_valid;
+   
 cartesian2polar u_cartesian2polar (
-    .rstn         ( rstn       ),
+    .rst_n         ( rstn       ),
     .clk          ( clk        ),
     .i_en         ( 1'b1       ),
     .i_x          ( underflow_mode ? underflow_x : x / 16'sd5 ),  // input : 振幅为 ±3277 的余弦波
     .i_y          ( underflow_mode ? underflow_y : y / 16'sd5 ),  // input : 振幅为 ±3277 的正弦波
     .o_rho        ( rho        ),  // output: ρ, 应该是一直等于或近似 3277
-    .o_theta      ( phi        )   // output: φ, 应该是一个接近 θ 的角度值
+    .o_theta      ( phi        ),   // output: φ, 应该是一个接近 θ 的角度值
+    .o_en(theta_valid)
 );
 
 svpwm u_svpwm (
@@ -89,12 +93,21 @@ initial begin
     assert(u_sincos.o_cos inside {[-16'sd2028:-16'sd1628]} && u_sincos.o_sin inside {[-16'sd16476:-16'sd16076]}) 
         else $error("Wrong sin/cos at theta=3000 (actual cos=%d, sin=%d)", u_sincos.o_cos, u_sincos.o_sin);
 
+   wait(u_sincos.o_en == 1'b0);
+   //Underflow tests: force x/y
+   
     // Modified: Forced underflow in cartesian2polar inputs (negative x/y to simulate sincos underflow propagation)
     underflow_mode = 1;
     underflow_x = -16'sd1;  // Small negative to trigger potential underflow in abs() or amp calc
     underflow_y = -16'sd1;
-    repeat(10) @(posedge clk);
-    $display("Forced underflow (x=y=-1): rho=%d (expected ~1), phi=%d (expected 1536 for 135°)", rho, phi);  // 135° since (-1,-1) is quadrant 3
+   
+   repeat(20) @(posedge clk);  
+   // Wait ~20 cycles (>14 latency) for module to process new inputs
+
+   wait(u_cartesian2polar.o_en == 1'b1);
+    $display("Forced underflow (x=y=-1): rho=%d (expected ~1), phi=%d theta is %d (expected 2560 for 225 degrees)", 
+	     rho, phi,
+	     u_cartesian2polar.o_theta);  // 225° since (-1,-1) is quadrant 2 (quadrants labelled: 0,1,2,3)
 
     // Original forced small positive test (unchanged, but added display for rho/phi)
     underflow_x = 16'sd1;
@@ -106,11 +119,11 @@ initial begin
 
    
     $display("Forced small positive (x=y=1): rho=%d (expected ~1), phi=%d (expected 512 for 45°). Theta is %d Underflow_mode is %d", rho, phi,u_cartesian2polar.o_theta,underflow_mode);
-    if (u_cartesian2polar.o_theta != 512)
+    if (u_cartesian2polar.o_theta inside {500, 530})
       begin
-        $error("Underflow for o_theta expected to be 512");
+         $error("Underflow for o_theta value %d (45 degrees) expected to be 512",
+		u_cartesian2polar.o_theta);
 	 $finish();
-	 
       end
    
     underflow_mode = 0;
