@@ -110,8 +110,9 @@ initial begin
     underflow_mode = 1;
     underflow_x = -16'sd1;  // Small negative to trigger potential underflow in abs() or amp calc
     underflow_y = -16'sd1;
-   
-   repeat(20) @(posedge clk);  
+
+   //fix to all for pipeline of cartesian 2 polar.
+   repeat(30) @(posedge clk);  
    // Wait ~20 cycles (>14 latency) for module to process new inputs
 
    wait(u_cartesian2polar.o_en == 1'b1);
